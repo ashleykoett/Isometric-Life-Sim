@@ -6,6 +6,7 @@ enum Layers
 {
     Selectable = 6,
     Interactable = 7,
+    FloorTile = 8,
 }
 
 public class MouseInputManager : MonoBehaviour
@@ -13,6 +14,7 @@ public class MouseInputManager : MonoBehaviour
     private static MouseInputManager _instance;
     public static MouseInputManager Instance {  get { return _instance; } }
 
+    public LayerMask layerMask;
     public PlayerMovement player;
     public OverlayTile overlayTile;
     public float overlayTileOffsetY = 1f;
@@ -36,22 +38,31 @@ public class MouseInputManager : MonoBehaviour
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
-        int layerMask = 1 << (int)Layers.Selectable;
-
-        if(Physics.Raycast(ray, out hit, Mathf.Infinity, (int) layerMask))
+        if(Physics.Raycast(ray, out hit, Mathf.Infinity, 1 << (int)Layers.FloorTile))
         {
             _selectedObject = hit.collider.gameObject;
             Vector3 targetPosition = _selectedObject.transform.position;
             overlayTile.transform.position = new Vector3(targetPosition.x, targetPosition.y + overlayTileOffsetY, targetPosition.z);
             overlayTile.ShowTile();
 
-            if(Input.GetMouseButtonDown(0))
+            bool canTarget = !_selectedObject.GetComponent<Tile>().Occupied;
+            if (canTarget)
             {
-                player.SetTarget(_selectedObject.transform);
+                overlayTile.GoodSelection();
+
+                if (Input.GetMouseButtonDown(0))
+                {
+                    player.SetTarget(_selectedObject);
+                }
+            }
+            else
+            {
+                overlayTile.BadSelection();
             }
 
             return;
         }
+
         else
         {
             overlayTile.HideTile();
